@@ -1,0 +1,23 @@
+﻿@page "/"
+@using Microsoft.Graph
+@using Microsoft.AspNetCore.Authorization
+@inject GraphServiceClient GraphClient
+
+
+<h1>Hello, world!</h1>
+
+@if (user != null)
+{
+    <p>Mobile Phone: @user.MobilePhone</p>
+}
+
+
+@code {
+    private User user;
+
+    protected async override Task OnInitializedAsync()
+    {
+        var request = GraphClient.Me.Request();
+        user = await request.GetAsync();
+    }
+}

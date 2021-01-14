@@ -17,19 +17,18 @@ namespace BlazorApp3
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("#app");
-            
-            //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-            builder.Services.AddGraphClient("https://graph.microsoft.com/User.Read");
+            // Adds the Microsoft graph client (Graph SDK) support for this app. 
+            builder.Services.AddMicrosoftGraphClient("https://graph.microsoft.com/User.Read");
 
+            // Integrates authentication with the MSAL library
             builder.Services.AddMsalAuthentication(options =>
-             {
-                 builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
-                 options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
-                
-             });
+            {
+                builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+                options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
+            });
 
-            
+
 
             await builder.Build().RunAsync();
         }

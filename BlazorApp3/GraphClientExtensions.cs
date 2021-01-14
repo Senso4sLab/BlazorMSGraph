@@ -14,48 +14,48 @@ namespace BlazorApp3
 {
     internal static class GraphClientExtensions
     {
-        public static IServiceCollection AddGraphClient(
-            this IServiceCollection services, params string[] scopes)
+        /// <summary>
+        /// Extension method for adding the Microsoft Graph SDK to IServiceCollection.
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="scopes">The MS Graph scopes to request</param>
+        /// <returns></returns>
+        public static IServiceCollection AddMicrosoftGraphClient(this IServiceCollection services, params string[] scopes)
         {
-            services.Configure<RemoteAuthenticationOptions<MsalProviderOptions>>(
-                options =>
+            services.Configure<RemoteAuthenticationOptions<MsalProviderOptions>>(options =>
+            {
+                foreach (var scope in scopes)
                 {
-                    foreach (var scope in scopes)
-                    {
-                        options.ProviderOptions.AdditionalScopesToConsent.Add(scope);
-                    }
-                });
+                    options.ProviderOptions.AdditionalScopesToConsent.Add(scope);
 
-            services.AddScoped<IAuthenticationProvider, NoOpGraphAuthenticationProvider>();
+                }
+            });
+
+            services.AddScoped<IAuthenticationProvider, GraphAuthenticationProvider>();
             services.AddScoped<IHttpProvider, HttpClientHttpProvider>(sp => new HttpClientHttpProvider(new HttpClient()));
-
             services.AddScoped<GraphServiceClient>();
-            //services.AddScoped(sp =>
-            //{
-            //    return new GraphServiceClient(
-            //        sp.GetRequiredService<IAuthenticationProvider>(),
-            //        sp.GetRequiredService<IHttpProvider>());
-            //});
-
             return services;
         }
 
-        private class NoOpGraphAuthenticationProvider : IAuthenticationProvider
+        /// <summary>
+        /// Implements IAuthenticationProvider interface.
+        /// Tries to get an access token for Microsoft Graph.
+        /// </summary>
+        private class GraphAuthenticationProvider : IAuthenticationProvider
         {
-            public NoOpGraphAuthenticationProvider(IAccessTokenProvider tokenProvider)
+            public GraphAuthenticationProvider(IAccessTokenProvider provider)
             {
-                TokenProvider = tokenProvider;
+                Provider = provider;
             }
 
-            public IAccessTokenProvider TokenProvider { get; }
+            public IAccessTokenProvider Provider { get; }
 
             public async Task AuthenticateRequestAsync(HttpRequestMessage request)
             {
-                var result = await TokenProvider.RequestAccessToken(
-                    new AccessTokenRequestOptions()
-                    {
-                        Scopes = new[] { "https://graph.microsoft.com/User.Read" }
-                    });
+                var result = await Provider.RequestAccessToken(new AccessTokenRequestOptions()
+                {
+                    Scopes = new[] { "https://graph.microsoft.com/User.Read" }
+                });
 
                 if (result.TryGetToken(out var token))
                 {
@@ -66,11 +66,11 @@ namespace BlazorApp3
 
         private class HttpClientHttpProvider : IHttpProvider
         {
-            private readonly HttpClient http;
+            private readonly HttpClient _client;
 
-            public HttpClientHttpProvider(HttpClient http)
+            public HttpClientHttpProvider(HttpClient client)
             {
-                this.http = http;
+                _client = client;
             }
 
             public ISerializer Serializer { get; } = new Serializer();
@@ -83,17 +83,15 @@ namespace BlazorApp3
 
             public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
             {
-                return http.SendAsync(request);
+                return _client.SendAsync(request);
             }
 
-            public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-                HttpCompletionOption completionOption,
-                CancellationToken cancellationToken)
+            public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
             {
-                return http.SendAsync(request, completionOption, cancellationToken);
+                return _client.SendAsync(request, completionOption, cancellationToken);
             }
         }
     }
 
-    
+
 }
